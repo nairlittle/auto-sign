@@ -26,7 +26,7 @@ USERNAME=your_account
 PASSWORD=your_password
 PUSH_URL=
 SAVE_CAPTCHA=false
-DATA_DIR=.
+DATA_DIR=/data
 ```
 
 说明：
@@ -36,6 +36,12 @@ DATA_DIR=.
 - `PUSH_URL`: 推送通知地址，可留空
 - `SAVE_CAPTCHA`: 是否保存验证码图片用于排查
 - `DATA_DIR`: 运行数据目录，保存 `cookies.json`、`logs.txt`、`captcha.png`
+
+本地直接运行时，建议改成：
+
+```env
+DATA_DIR=.
+```
 
 ## Local Run
 

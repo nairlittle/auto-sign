@@ -27,22 +27,22 @@ CRON_LINE="${CRON_SCHEDULE} ${RUN_CMD}"
 
 echo "[1/4] Checking required paths"
 if [[ ! -d "${APP_DIR}" ]]; then
-  echo "App directory does not exist: ${APP_DIR}" >&2
+  echo "应用目录不存在: ${APP_DIR}" >&2
   exit 1
 fi
 
 if [[ ! -f "${ENV_FILE}" ]]; then
-  echo "Env file does not exist: ${ENV_FILE}" >&2
+  echo "环境变量文件不存在: ${ENV_FILE}" >&2
   exit 1
 fi
 
-echo "[2/4] Updating repository"
+echo "[2/4] 更新仓库"
 git -C "${APP_DIR}" pull --ff-only
 
-echo "[3/4] Building image"
+echo "[3/4] 构建镜像"
 /usr/bin/docker build -t "${IMAGE_NAME}" "${APP_DIR}"
 
-echo "[4/4] Installing crontab entry"
+echo "[4/4] 安装 crontab 任务"
 TMP_CRON="$(mktemp)"
 if crontab -l >/dev/null 2>&1; then
   crontab -l | grep -Fv "${RUN_CMD}" > "${TMP_CRON}" || true
@@ -51,7 +51,7 @@ echo "${CRON_LINE}" >> "${TMP_CRON}"
 crontab "${TMP_CRON}"
 rm -f "${TMP_CRON}"
 
-echo "Crontab installed"
+echo "定时任务安装完成"
 echo "APP_DIR=${APP_DIR}"
 echo "DATA_DIR=${DATA_DIR}"
 echo "IMAGE_NAME=${IMAGE_NAME}"

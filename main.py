@@ -59,10 +59,10 @@ class SignClient:
 
     def validate_config(self):
         if not USERNAME or not PASSWORD:
-            raise RuntimeError("USERNAME or PASSWORD is not configured")
+            raise RuntimeError("USERNAME 或 PASSWORD 未配置")
 
         if not PUSH_URL:
-            logging.warning("PUSH_URL is not configured, push notification will be skipped")
+            logging.warning("未配置 PUSH_URL，将跳过推送通知")
 
     def request(self, method, path, *, expect_json=False, **kwargs):
         url = path if path.startswith("http") else f"{BASE_URL}{path}"
@@ -79,12 +79,12 @@ class SignClient:
             try:
                 return response.json()
             except ValueError as exc:
-                raise RuntimeError(f"Failed to parse JSON response: {url}") from exc
+                raise RuntimeError(f"接口返回的 JSON 无法解析: {url}") from exc
 
         return response
 
     def init_session(self):
-        logging.info("Initializing session")
+        logging.info("初始化会话")
         self.request("GET", "/")
 
     def load_cookie(self):
@@ -92,23 +92,23 @@ class SignClient:
             with COOKIE_FILE.open("r", encoding="utf-8") as file:
                 cookies = json.load(file)
         except FileNotFoundError:
-            logging.info("Cookie file not found, login flow will run")
+            logging.info("未找到 cookie 文件，将执行登录流程")
             return False
         except json.JSONDecodeError as exc:
-            logging.warning("Cookie file is not valid JSON: %s", exc)
+            logging.warning("cookie 文件不是合法 JSON: %s", exc)
             return False
         except OSError as exc:
-            logging.warning("Failed to read cookie file: %s", exc)
+            logging.warning("读取 cookie 文件失败: %s", exc)
             return False
 
         self.session.cookies.update(cookies)
-        logging.info("Loaded local cookies from %s", COOKIE_FILE)
+        logging.info("已加载本地 cookie: %s", COOKIE_FILE)
         return True
 
     def save_cookie(self):
         with COOKIE_FILE.open("w", encoding="utf-8") as file:
             json.dump(self.session.cookies.get_dict(), file, ensure_ascii=False, indent=2)
-        logging.info("Saved cookies to %s", COOKIE_FILE)
+        logging.info("已保存 cookie: %s", COOKIE_FILE)
 
     def get_nonce(self):
         payload = self.request(
@@ -121,9 +121,9 @@ class SignClient:
             nonce = payload["_nonce"]
             logged_in = int(payload["user"]["id"]) != 0
         except (KeyError, TypeError, ValueError) as exc:
-            raise RuntimeError(f"Unexpected nonce payload: {payload}") from exc
+            raise RuntimeError(f"nonce 接口返回结构异常: {payload}") from exc
 
-        logging.info("Fetched nonce, logged in: %s", logged_in)
+        logging.info("获取 nonce 成功，当前登录状态: %s", logged_in)
         return nonce, logged_in
 
     def get_captcha(self, nonce):
@@ -141,7 +141,7 @@ class SignClient:
         try:
             return payload["data"]["imgData"]
         except (KeyError, TypeError) as exc:
-            raise RuntimeError(f"Unexpected captcha payload: {payload}") from exc
+            raise RuntimeError(f"验证码接口返回结构异常: {payload}") from exc
 
     def recognize_captcha(self, nonce):
         img_base64 = self.get_captcha(nonce)
@@ -151,7 +151,7 @@ class SignClient:
         try:
             img_bytes = base64.b64decode(img_base64)
         except ValueError as exc:
-            raise RuntimeError("Captcha image is not valid base64") from exc
+            raise RuntimeError("验证码图片不是合法的 base64 数据") from exc
 
         img_bytes = normalize_captcha(rm_transparent(img_bytes))
         if SAVE_CAPTCHA:
@@ -159,15 +159,15 @@ class SignClient:
 
         captcha = self.ocr.classification(img_bytes).strip()
         captcha = re.sub(r"\W+", "", captcha)
-        logging.info("OCR result: %s", captcha)
+        logging.info("OCR 识别结果: %s", captcha)
 
         if not captcha:
-            raise RuntimeError("OCR did not recognize captcha")
+            raise RuntimeError("OCR 未识别出验证码")
 
         return captcha
 
     def login(self, nonce):
-        logging.info("Starting login flow")
+        logging.info("开始登录流程")
         login_url = (
             "/wp-admin/admin-ajax.php"
             f"?_nonce={nonce}"
@@ -185,11 +185,11 @@ class SignClient:
             }
             response = self.request("POST", login_url, data=form_data)
             body = response.text.strip()
-            logging.info("Login response: %s", body)
+            logging.info("登录接口返回: %s", body)
 
             if "success" in body.lower() or "登录成功" in body:
                 self.save_cookie()
-                logging.info("Login succeeded")
+                logging.info("登录成功")
                 return True
 
             try:
@@ -199,13 +199,13 @@ class SignClient:
 
             if payload and payload.get("code") == 0:
                 self.save_cookie()
-                logging.info("Login succeeded")
+                logging.info("登录成功")
                 return True
 
-            logging.warning("Captcha login attempt %s failed: %s", attempt, body)
+            logging.warning("第 %s 次验证码识别登录失败: %s", attempt, body)
             time.sleep(1)
 
-        logging.error("Captcha recognition failed repeatedly, login did not succeed")
+        logging.error("验证码连续识别失败，登录未成功")
         return False
 
     def sign(self, nonce):
@@ -219,8 +219,8 @@ class SignClient:
             ),
             expect_json=True,
         )
-        msg = payload.get("msg", "Unknown result")
-        logging.info("Sign result: %s", msg)
+        msg = payload.get("msg", "未知结果")
+        logging.info("签到结果: %s", msg)
         return msg
 
     def push(self, msg):
@@ -234,9 +234,9 @@ class SignClient:
                 timeout=REQUEST_TIMEOUT,
             )
             response.raise_for_status()
-            logging.info("Push notification succeeded")
+            logging.info("推送通知成功")
         except requests.RequestException as exc:
-            logging.error("Push notification failed: %s", exc)
+            logging.error("推送通知失败: %s", exc)
 
     def run(self):
         self.validate_config()
@@ -248,26 +248,26 @@ class SignClient:
                 nonce, logged_in = self.get_nonce()
 
                 if not logged_in:
-                    logging.info("Session is not logged in, trying login")
+                    logging.info("当前未登录，开始尝试登录")
                     if not self.login(nonce):
                         time.sleep(2)
                         continue
 
                     nonce, logged_in = self.get_nonce()
                     if not logged_in:
-                        raise RuntimeError("Login response looked successful, but session is still logged out")
+                        raise RuntimeError("登录接口返回成功，但会话仍未登录")
 
                 msg = self.sign(nonce)
                 self.push(msg)
                 return
             except requests.RequestException as exc:
-                logging.error("Attempt %s failed with request error: %s", attempt, exc)
+                logging.error("第 %s 次尝试失败，请求异常: %s", attempt, exc)
             except Exception as exc:
-                logging.error("Attempt %s failed: %s", attempt, exc)
+                logging.error("第 %s 次尝试失败: %s", attempt, exc)
 
             time.sleep(2)
 
-        logging.error("All retries failed, exiting")
+        logging.error("连续多次尝试失败，程序退出")
 
 
 if __name__ == "__main__":
