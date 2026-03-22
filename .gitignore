@@ -1,0 +1,9 @@
+.env
+__pycache__/
+.idea/
+.venv/
+*.pyc
+cookies.json
+captcha.png
+logs.txt
+data/
