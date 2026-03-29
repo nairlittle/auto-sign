@@ -113,12 +113,29 @@ cd /opt/auto-sign/app
 bash deploy.sh
 ```
 
-脚本会执行这些操作：
+参数说明：
+
+- `-t`, `--time`: 自定义定时任务时间，格式与标准 cron 一致
+
+如果需要指定定时任务时间，例如每天 `09:15`：
+
+```bash
+cd /opt/auto-sign/app
+bash deploy.sh -t "15 9 * * *"
+```
+
+上面的 `deploy.sh` 会执行这些操作：
 
 - `git pull --ff-only`
 - 对比 `.env.example` 和运行中的 `.env`，提示缺失的配置项
 - `docker build`
 - 安装一条每天 `08:30` 执行的 `crontab`
+
+如果只想立刻手动执行一次容器，而不安装定时任务：
+
+```bash
+docker run --rm --env-file /opt/auto-sign/data/.env -v /opt/auto-sign/data:/data auto-sign:latest
+```
 
 ## 更新说明
 

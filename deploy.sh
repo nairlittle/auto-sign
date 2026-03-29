@@ -6,17 +6,40 @@ DATA_DIR="${DATA_DIR:-/opt/auto-sign/data}"
 IMAGE_NAME="${IMAGE_NAME:-auto-sign:latest}"
 CRON_SCHEDULE="${CRON_SCHEDULE:-30 8 * * *}"
 
-if [[ $# -ge 1 ]]; then
-  APP_DIR="$1"
-fi
+usage() {
+  cat <<EOF
+用法:
+  bash deploy.sh
+  bash deploy.sh -t "15 9 * * *"
 
-if [[ $# -ge 2 ]]; then
-  DATA_DIR="$2"
-fi
+参数:
+  -t, --time   自定义 crontab 时间，格式与标准 cron 一致
+  -h, --help   显示帮助
+EOF
+}
 
-if [[ $# -ge 3 ]]; then
-  IMAGE_NAME="$3"
-fi
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -t|--time)
+      if [[ $# -lt 2 ]]; then
+        echo "参数 $1 需要提供时间值。" >&2
+        usage
+        exit 1
+      fi
+      CRON_SCHEDULE="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "不支持的参数: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
 
 if ! command -v git >/dev/null 2>&1; then
   echo "未在 PATH 中找到 git，请先安装或检查环境变量。" >&2
