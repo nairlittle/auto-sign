@@ -1,4 +1,4 @@
-requests
+curl_cffi
 pillow
 python-dotenv
 ddddocr
